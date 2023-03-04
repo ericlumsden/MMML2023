@@ -7,4 +7,4 @@ Data collection will be written in javascript - will utilize puppeteer to scrape
 
 Analysis and visualization will be done in python
 
-Blogs about my process will be written throughout the process and publisehd on (my personal website)[ericlumsden.github.io].
+Blogs about my process will be written throughout the process and publisehd on [my personal website](ericlumsden.github.io).
