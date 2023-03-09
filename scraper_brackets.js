@@ -25,7 +25,6 @@ function find_num_games(bracket, round) {
     }
 }
 
-const example_year = 2022;
 async function scrapeTourney(year) {
     // First, establish new table for this tournament and make a sql_tourney to insert values once looked up
     db.run(
@@ -34,7 +33,7 @@ async function scrapeTourney(year) {
     const sql_tourney = `INSERT INTO tourney${year} (year, bracket, round, game, team_1, score_1, url_1, team_2, score_2, url_2) VALUES(?,?,?,?,?,?,?,?,?,?)`;
 
     let url = `https://www.sports-reference.com/cbb/postseason/men/${year}-ncaa.html`;
-    let browser = await puppeteer.launch();
+    let browser = await puppeteer.launch({headless: false});
     let page = await browser.newPage();
     page.setDefaultNavigationTimeout(0);
     await page.goto(url, {waitUntil: 'networkidle0',});
@@ -77,10 +76,10 @@ async function scrapeTourney(year) {
                             score2 = await score_txt.jsonValue();
                         }
 
-                        console.log({team1, url1, score1, team2, url2, score2});
+                        await console.log({team1, url1, score1, team2, url2, score2});
                     }
                     
-                    db.run(sql_tourney, [year, bracket, round, game, team1, score1, url1, team2, score2, url2]);
+                    await db.run(sql_tourney, [year, bracket, round, game, team1, score1, url1, team2, score2, url2]);
 
                 }
             }
@@ -90,18 +89,12 @@ async function scrapeTourney(year) {
         console.log(error);
     } finally {
         await browser.close(console.log('browser closed'));
-        db.close((err) => {
-            if (err) return console.error(err.message);
-            console.log('db closed');
-        })
     }
 }
 
-scrapeTourney(example_year);
-
-/*
 let years_to_scrape = Array.from(Array(2020-1985).keys(), x => x+1985);
-years_to_scrape = years_to_scrape.concat(2021);
+years_to_scrape = years_to_scrape.concat([2021,2022]);
+console.log(years_to_scrape);
 
 async function scrapeYears(array_of_years) {
     for (let x = 0; x < array_of_years.length; x++) {
@@ -109,12 +102,16 @@ async function scrapeYears(array_of_years) {
         console.log(`scraping ${yr} tourney`);
         await scrapeTourney(yr);
     }
+
+    await db.close((err) => {
+        if (err) return console.error(err.message);
+        console.log('db closed');
+    })
 }
 
 scrapeYears(years_to_scrape);
 // Finally, close database
-db.close((err) => {
+/*db.close((err) => {
     if (err) return console.error(err.message);
     console.log('db closed');
-});
-*/
+});*/
