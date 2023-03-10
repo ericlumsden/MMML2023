@@ -25,14 +25,19 @@ function find_num_games(bracket, round) {
     }
 }
 
+function generate_id(year, team_name) {
+    let id_str = year.toString().concat(team_name);
+    return id_str.replace(/\s+/g, '');
+}
+
 async function scrapeTourney(year) {
     // First, establish new table for this tournament and make a sql_tourney to insert values once looked up
     db.run(
-        `CREATE TABLE IF NOT EXISTS tourney${year}(year, bracket, round, game, team_1, score_1, url_1, team_2, score_2, url_2)`
+        `CREATE TABLE IF NOT EXISTS womenstourney (year, bracket, round, game, team_1, team_1ID, score_1, url_1, team_2, team_2ID, score_2, url_2, winner)`
     );
-    const sql_tourney = `INSERT INTO tourney${year} (year, bracket, round, game, team_1, score_1, url_1, team_2, score_2, url_2) VALUES(?,?,?,?,?,?,?,?,?,?)`;
+    const sql_tourney = `INSERT INTO womenstourney (year, bracket, round, game, team_1, team_1ID, score_1, url_1, team_2, team_2ID, score_2, url_2, winner) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`;
 
-    let url = `https://www.sports-reference.com/cbb/postseason/men/${year}-ncaa.html`;
+    let url = `https://www.sports-reference.com/cbb/postseason/women/${year}-ncaa.html`;
     let browser = await puppeteer.launch({headless: false});
     let page = await browser.newPage();
     page.setDefaultNavigationTimeout(0);
@@ -54,7 +59,7 @@ async function scrapeTourney(year) {
                 let num_games = find_num_games(bracket, round);
 
                 for (let game = 1; game <= num_games; game++) {
-                    let team1, score1, url1, team2, score2, url2;
+                    let team1, team1ID, score1, url1, team2, team2ID, score2, url2, winner;
 
                     for (let team = 1; team <= 2; team++) {
 
@@ -70,16 +75,23 @@ async function scrapeTourney(year) {
                             team1 = await name_txt.jsonValue();
                             url1 = await name_url.jsonValue();
                             score1 = await score_txt.jsonValue();
+                            team1ID = generate_id(year, team1);
                         } else {
                             team2 = await name_txt.jsonValue();
                             url2 = await name_url.jsonValue();
                             score2 = await score_txt.jsonValue();
+                            team2ID = generate_id(year, team2);
                         }
+                    }
 
-                        await console.log({team1, url1, score1, team2, url2, score2});
+                    if (score1 > score2) {
+                        winner = 0;
+                    } else {
+                        winner = 1;
                     }
                     
-                    await db.run(sql_tourney, [year, bracket, round, game, team1, score1, url1, team2, score2, url2]);
+                    await console.log({team1, url1, score1, team2, url2, score2});
+                    await db.run(sql_tourney, [year, bracket, round, game, team1, team1ID, score1, url1, team2, team2ID, score2, url2, winner]);
 
                 }
             }
@@ -92,7 +104,7 @@ async function scrapeTourney(year) {
     }
 }
 
-let years_to_scrape = Array.from(Array(2020-1985).keys(), x => x+1985);
+let years_to_scrape = Array.from(Array(2020-2010).keys(), x => x+2010);
 years_to_scrape = years_to_scrape.concat([2021,2022]);
 console.log(years_to_scrape);
 
