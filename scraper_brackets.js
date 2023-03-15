@@ -118,7 +118,7 @@ async function scrapeYears(array_of_years) {
     await db.close((err) => {
         if (err) return console.error(err.message);
         console.log('db closed');
-    })
+    });
 }
 
 scrapeYears(years_to_scrape);
