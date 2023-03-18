@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import sqlite3
 import matplotlib.pyplot as plt
+from dataclasses import dataclass
 
 conn = sqlite3.connect('./ncaa.db')
 df = pd.read_sql("SELECT * FROM menstraining", conn)
@@ -23,34 +24,64 @@ Y_test = Y[300:].T
 n_hidden = 108
 num_iterations = 5000
 
-class NeuralNetwork():
-    def __init__(self):
-        self.synaptic_weights = 2 * np.random.random((54, 1)) - 1
+@dataclass
+class NeuralNetwork:
+    bias = 0.5
+    errors = []
 
+    data_set: any
+    training_num: int
+    iterations: int
+    learning_rate: float
+    l1_num: int
+
+    def split(self):
+        X, Y = self.data_set[:, :-1], self.data_set[:, -1].T
+        X_train, X_test = X[:self.training_num], X[self.training_num:]
+        Y_train, Y_test = Y[:self.training_num], Y[self.training_num:]
+        return X_train, X_test, Y_train.reshape((len(Y_train),1)), Y_test.reshape((len(Y_test)),1)
+
+    def weights(self, rows, cols):
+        return np.random.rand(rows, cols) - 0.5 # random weights between -0.5 and 0.5; columns have to equal rows in X_train, rows have to equal 
+
+    # Will use a sigmoid function for predicting which team will win
     def sigmoid(self, x):
-        return 1/(1+np.exp(-x))
+        return 1 / (1 + np.exp(x))
+    
+    def deriv_sigmoid(self, x):
+        return self.sigmoid(x) * (1 - self.sigmoid(x))
+    
+    def forward(self, weights, X_train_matrix, Y_train_matrix):
+        l1_input = np.dot(X_train_matrix, weights) + self.bias
+        l1_output = self.sigmoid(l1_input)
+        error = 2 * (l1_output - Y_train_matrix)
+        return l1_output, error
+    
+    def backprop(self, weights, error):
+        weights -= self.deriv_sigmoid(error) * self.learning_rate
+        return weights
 
-    def sigmoid_derivative(self, x):
-        return x * (1 - x)
+    def train(self):
+        X_train, X_test, Y_train, Y_test = self.split()
+        random_weights = self.weights(X_train.shape[1], self.l1_num)
+        for iteration in range(self.iterations):
+            l1_output, error = self.forward(random_weights, X_train, Y_train)
+            self.errors.append(np.sum(error))
+            random_weights = self.backprop(random_weights, error)
+        return random_weights
+    
+    def test(self, weights, X_test_matrix=X_test, Y_test_matrix=Y_test):
+        X_train, X_test, Y_train, Y_test = self.split()
+        test_output, test_error = self.forward(weights, X_test, Y_test)
+        return test_output, test_error
 
-    def train(self, training_inputs, training_outputs, training_iterations):
-        for iteration in range(training_iterations):
-            output = self.think(training_inputs)
-            error = np.subtract(training_outputs, output)
-            print(output.shape, training_outputs.shape)
-            adjustments = np.dot(training_inputs.T, error * self.sigmoid_derivative(output))
-            self.synaptic_weights += adjustments
-        
-    def think(self, inputs):
-        inputs = inputs.astype(float)
-        output = self.sigmoid(np.dot(inputs, self.synaptic_weights))
+nn = NeuralNetwork(numpy_df, 300, 5000, 0.0005, 108)
+nn.train()
+nn.test()
 
-        return output
+plt.plot(range(len(nn.errors)), nn.errors)
+plt.savefig("./errors.png")
 
-nn = NeuralNetwork()
-
-nn.train(X_train, Y_train, 5000)
-print(nn.think(X_test), Y_test)
 
 '''
 class NeuralNetMLP(object):
